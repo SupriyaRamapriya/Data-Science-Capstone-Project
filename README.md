@@ -1,4 +1,4 @@
-# Repo for Coursera Data Science Capstone Course Project
+# Coursera Data Science Capstone Course Project
 
 This repository contains the ui.R and server.R files for the developed Shiny Application as well as the RStudio Presenter files for the Data Science Capstone Course Project.
 
