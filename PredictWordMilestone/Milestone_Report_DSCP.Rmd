@@ -1,0 +1,128 @@
+---
+title: "DS Capstone Project Milestone Report"
+author: "Supriya Sreedhara"
+date: "January 17, 2019"
+output: html_document
+---
+
+## Introduction
+
+This is the Milestone Report for the Coursera Data Science Capstone project. The goal of the capstone project is to create a predictive text model using a large text corpus of documents as training data. Natural language processing techniques will be used to perform the analysis and build the predictive model.
+
+This milestone report describes the major features of the training data with our exploratory data analysis and summarizes our plans for creating the predictive model.
+
+## Getting The Data
+
+We downloaded the zip file containing the text files from https://d396qusza40orc.cloudfront.net/dsscapstone/dataset/Coursera-SwiftKey.zip.
+
+The data sets consist of text from 3 different sources: 1) News, 2) Blogs and 3) Twitter feeds. The text data are provided in 4 different languages: 1) German, 2) English - United States, 3) Finnish and 4) Russian. In this project, we will only focus on the English - United States data sets.
+
+```{r, warning=FALSE}
+news <- readLines("./final/en_US/en_US.news.txt", encoding = "UTF-8", skipNul = T)
+twitter <- readLines("./final/en_US/en_US.twitter.txt", encoding = "UTF-8", skipNul = T)
+blogs <- readLines("./final/en_US/en_US.blogs.txt", encoding = "UTF-8", skipNul = T)
+```
+
+We examined the data sets and summarize our findings (file sizes, line counts, word counts, and mean words per line) below.
+
+```{r, warning=FALSE}
+library(stringi)
+
+# Get file sizes
+blogs.size <- file.info("./final/en_US/en_US.blogs.txt")$size / 1024 ^ 2
+news.size <- file.info("./final/en_US/en_US.news.txt")$size / 1024 ^ 2
+twitter.size <- file.info("./final/en_US/en_US.twitter.txt")$size / 1024 ^ 2
+
+# Get words in files
+blogs.words <- stri_count_words(blogs)
+news.words <- stri_count_words(news)
+twitter.words <- stri_count_words(twitter)
+
+# Summary of the data sets
+data.frame(source = c("blogs", "news", "twitter"),
+           file.size.MB = c(blogs.size, news.size, twitter.size),
+           num.lines = c(length(blogs), length(news), length(twitter)),
+           num.words = c(sum(blogs.words), sum(news.words), sum(twitter.words)),
+           mean.num.words = c(mean(blogs.words), mean(news.words), mean(twitter.words)))
+```
+
+## Cleaning The Data
+
+Before performing exploratory analysis, we must clean the data first. This involves removing URLs, special characters, punctuations, numbers, excess whitespace, stopwords, and changing the text to lower case. Since the data sets are quite large, we will randomly choose 1% of the data to demonstrate the data cleaning and exploratory analysis.
+
+```{r, warning=FALSE}
+library(tm)
+library(SnowballC)
+# Sample the data
+set.seed(679)
+data.sample <- c(sample(blogs, length(blogs) * 0.01),
+                 sample(news, length(news) * 0.01),
+                 sample(twitter, length(twitter) * 0.01))
+
+# Create corpus and clean the data
+corpus <- VCorpus(VectorSource(data.sample))
+remove.decimals <- function(x) {gsub("([0-9]*)\\.([0-9]+)", "\\1 \\2", x)}
+remove.hashtags <- function(x) { gsub("#[a-zA-z0-9]+", " ", x)}
+remove.noneng <- function(x) {gsub("\\W+", " ",x)}
+corpus <- tm_map(corpus, remove.decimals)
+corpus <- tm_map(corpus, removeNumbers)
+corpus <- tm_map(corpus, remove.noneng)
+corpus <- tm_map(corpus, remove.hashtags)
+corpus <- tm_map(corpus, stripWhitespace)
+corpus <- tm_map(corpus, removePunctuation)
+corpus <- tm_map(corpus, tolower)
+corpus <- tm_map(corpus, removeWords, stopwords("english"))
+```
+
+## Exploratory Analysis
+
+We are now ready to perform exploratory analysis on the data. It would be interesting and helpful to find the most frequently occurring words in the data. Here we list the most common one grams, two grams, and three grams.
+
+```{r, warning=FALSE}
+library(RWeka)
+options(mc.cores=1)
+
+one.g_Tokenizer <- NGramTokenizer(corpus, Weka_control(min = 1, max = 1))
+one.g <- data.frame(table(one.g_Tokenizer))
+one.g.sorted <- one.g[order(one.g$Freq,decreasing = TRUE),]
+```
+
+Here are the top 20 one grams.
+
+```{r}
+one.g.sorted[1:20,]
+```
+
+Lets create Two-Gram Tokenization.
+
+```{r}
+two.g_Tokenizer <- NGramTokenizer(data.sample, Weka_control(min = 2, max = 2))
+two.g <- data.frame(table(two.g_Tokenizer))
+two.g.sorted <- two.g[order(two.g$Freq,decreasing = TRUE),]
+```
+
+Here are the top 20 Two-grams
+
+```{r}
+two.g.sorted[1:20,]
+```
+
+Lets create Three-Gram Tokenization.
+
+```{r}
+three.g_Tokenizer <- NGramTokenizer(data.sample, Weka_control(min = 3, max = 3))
+three.g <- data.frame(table(three.g_Tokenizer))
+three.g.sorted <- three.g[order(three.g$Freq,decreasing = TRUE),]
+```
+
+Here are the top 20 Three-grams
+
+```{r}
+three.g.sorted[1:20,]
+```
+
+### Further Development
+
+- As we can see from the three gram function. Most of the following words are some apostrophe words. So I would like to replace all apostrophe words into continuing words. Like I don't to I do not.
+- Build a predictive Model.
+- Build a Shiny Model.
